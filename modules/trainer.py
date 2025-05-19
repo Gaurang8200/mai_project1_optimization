@@ -2,6 +2,7 @@ from typing import Mapping, Optional, Iterator, Any
 import torch
 from torch import nn, optim
 from torch.utils.data import DataLoader
+from torch.optim import lr_scheduler
 from datetime import datetime as dt
 from tqdm.notebook import tqdm
 
@@ -10,7 +11,8 @@ args = {
     "fp16" : True,
     "profiler" : True,
     "gradAcc" : True,
-    "gradAccIter": 4
+    "gradAccIter": 4,
+    "lr_scheduler" : True,
 }
 
 class Trainer(nn.Module):
@@ -65,6 +67,10 @@ class Trainer(nn.Module):
         """
         model = self.model.to(self.device)
         self._optimizer_to(self.optimizer, self.device)
+
+        scheduler = None
+        if args["lr_scheduling"]:
+            scheduler = lr_scheduler.StepLR(self.optimizer, step_size=10, gamma=0.1)
 
         if args["fp16"]:
             scaler = torch.amp.GradScaler()
@@ -123,6 +129,9 @@ class Trainer(nn.Module):
                     prof.step()
                     
             yield model
+
+            if scheduler is not None:
+                scheduler.step()
         
         if args["profiler"]:
             prof.stop()
